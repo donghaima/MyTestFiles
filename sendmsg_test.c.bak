@@ -1,0 +1,141 @@
+/*
+ * sendmsg test program
+ */
+
+
+#include <errno.h>
+#include <sys/socket.h>
+#include <sys/uio.h>
+#include <sys/types.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <strings.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+/* Send data out a specified interface, with a specified src IP address */
+static int my_sendmsg(int fd, 
+                      char *oif_name, in_addr srcip,
+                      struct sockaddr *remote, 
+                      char *data, int len, 
+                      int flags)
+{
+    struct ifreq ifr;
+    struct iovec iov = { data, len };
+
+    memset(&ifr, 0, sizeof(ifr));
+    strncpy(ifr.ifr_name, oif_name, strlen(oif_name));
+    if(ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
+        fprintf(stderr, "unknown iface %s\n", oif_name);
+        return(-1);
+    }               
+
+    struct {
+        struct cmsghdr cm;
+        struct in_pktinfo ipi;
+    } cmsg = {
+        .cm = {
+            .cmsg_len = sizeof(struct cmsghdr) + sizeof(struct in_pktinfo),
+            .cmsg_level = SOL_IP,
+            .cmsg_type = IP_PKTINFO,
+        },
+        .ipi = {
+            .ipi_ifindex = ifr.ifr_ifindex,
+            .ipi_spec_dst = srcip,
+        },
+    };
+
+    struct msghdr m = {
+        .msg_name = remote,
+        .msg_namelen = sizeof(struct sockaddr_in),
+        .msg_iov = &iov,
+        .msg_iovlen = 1,
+        .msg_control = &cmsg,
+        .msg_controllen = sizeof(cmsg),
+        .msg_flags = 0,
+    };
+
+    return sendmsg(fd, &m, flags);
+}
+
+
+
+int main(int argc, char **argv)
+{
+    int fd;
+    struct sockaddr_in sa, da;
+    static struct msghdr m;
+    struct ifreq ifr;
+    const uint8_t pkt_data[] = {'0','1','2','3','4','5',};
+    struct iovec vec;
+    vec.iov_base = (void*)pkt_data;
+    vec.iov_len = sizeof(pkt_data);
+
+    struct {
+        struct cmsghdr cm;
+        struct in_pktinfo ipi;
+    } cmsg = { {sizeof(struct cmsghdr) + sizeof(struct in_pktinfo), 
+                SOL_IP, IP_PKTINFO}, {0, }};
+    
+    if (argc < 6) {
+        fprintf(stderr, 
+                "Usage: %s <via if> <to ip> <to port> <ipi_spec ip> <src port>\n",
+                argv[0]);
+        exit(1);
+    }
+    
+    //fd = socket(PF_INET, SOCK_RAW, IPPROTO_UDP);
+    fd = socket(PF_INET, SOCK_DGRAM, 0);
+    
+    if (fd < 0) {
+        perror ("socket:");
+        exit(1);
+    }
+
+    /* */
+    memset(&sa, 0, sizeof(sa));
+    sa.sin_family = AF_INET;
+    sa.sin_port = htons(atoi(argv[5]));
+    //sa.sin_addr.s_addr = inet_addr("127.0.0.1"); /* will be overwritten later */
+
+    if (bind(fd, (struct sockaddr *)&sa, sizeof(sa)) == -1) {
+        perror ("bind:");
+        exit(1);
+    }
+
+    memset(&ifr, 0, sizeof(ifr));
+    strncpy(ifr.ifr_name, argv[1], 15);
+    if(ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
+        fprintf(stderr, "unknown iface %s\n", argv[1]);
+        exit(1);
+    }               
+    
+    cmsg.ipi.ipi_ifindex = ifr.ifr_ifindex;            /* outgoing intf */
+    cmsg.ipi.ipi_spec_dst.s_addr = inet_addr(argv[4]); /* src ip address */
+
+    //cmsg.ipi.ipi_ifindex = 0;
+    //cmsg.ipi.ipi_addr.s_addr = inet_addr(argv[4]);   /* seems not useful */
+    
+    /* dest ip and port */
+    memset(&da, 0, sizeof(sa));
+    da.sin_family = AF_INET;
+    da.sin_port = htons(atoi(argv[3]));
+    da.sin_addr.s_addr = inet_addr(argv[2]);
+    
+    m.msg_name = (void*)&da;
+    m.msg_namelen = (socklen_t)sizeof(da);
+    m.msg_iov = &vec;
+    m.msg_iovlen = 1;
+    m.msg_control = &cmsg;
+    m.msg_controllen = sizeof(cmsg);
+    m.msg_flags = 0;
+    
+    while (1){
+        sleep(1);
+        sendmsg(fd, &m, 0);
+    }
+}
+
+

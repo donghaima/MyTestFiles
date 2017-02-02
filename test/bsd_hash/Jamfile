@@ -1,0 +1,1 @@
+Main test_hash : test_hash.c hash.c ;

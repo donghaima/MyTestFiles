@@ -1,0 +1,32 @@
+
+CurrentState                 NextState               Event                      Transition
+----------------------------------------------------------------------------------------------
+WaitPhyInit                  
+                             self                    all                maybeMakePhyInitProgress
+---------------------------------------------------------------------------------------------
+WaitLinkDown
+
+                             LoopbackEnabled         EthLoopbackOn              none
+                             WaitConfigurationPush              pushParamsIntoMiiAndRestartNegotiaton
+---------------------------------------------------------------------------------------------
+Disabled                     
+
+---------------------------------------------------------------------------------------------
+LoopbackEnabled
+
+---------------------------------------------------------------------------------------------
+WaitConfigurationPush
+                              self                   waitAutonegFinsih 
+                              WaitAutonegFinish      autoMakeProgress 
+                                                     autonegError
+---------------------------------------------------------------------------------------------
+WaitAutonegFinish                    
+                             self                    waitAutonegFinsih
+                             self                    autoMakeProgress
+                WaitForAutonegErrorResolution        autonegError
+                             self                    else            none
+---------------------------------------------------------------------------------------------
+WaitForAutonegErrorResolution
+                             self                    autonegError    maybeResolveAutonegErrors
+                             WaitAutonegFinish       else            none
+----------------------------------------------------------------------------------------------

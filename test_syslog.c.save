@@ -1,0 +1,108 @@
+#include <stdio.h>
+#include <syslog.h>
+
+#define    LOG_EX_SYSLOG (24<<3)    /* Example */
+#define    LOG_VQES_CP 	 (25<<3)    /* VQE-S Control Plane */
+#define    LOG_VQES_DP 	 (26<<3)    /* VQE-S Data Plane */
+#define    LOG_LIBRTP 	 (27<<3)    /* RTP/RTCP library */
+
+int main(int argc, char *argv[])
+{
+#if 0
+    /* First try to do some logging before openlog() */
+    printf("Before openlog()...\n");
+     
+    syslog (LOG_NOTICE, "Program started by User %d", getuid ());
+    syslog (LOG_INFO, "A tree falls in a forest");
+    printf("Sent LOG_NOTICE and LOG_INFO logs.\n\n");
+     
+    /* Now set the logmask so that debug and informational messages 
+     * get discarded without ever reaching Syslog. So the second syslog
+     * does nothing.
+     */    
+    setlogmask (LOG_UPTO (LOG_NOTICE));
+    syslog (LOG_NOTICE, "After setlogmask upto LOG_NOTICE: "
+            "Program started by User %d", getuid ());
+    syslog (LOG_INFO, "This INFO log Should not be seen");
+    printf("Sent LOG_NOTICE and LOG_INFO logs.\n\n");
+#endif
+
+#if 0
+    /* Now openlog() */
+    openlog ("exampleprog", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+
+    printf("After openlog(\"exampleprog\", ..., LOG_LOCAL1)...\n");
+     
+    syslog (LOG_NOTICE, "Program started by User %d", getuid ());
+    syslog (LOG_INFO, "A tree falls in a forest");
+    printf("Sent LOG_NOTICE and LOG_INFO logs.\n\n");     
+     
+    /* Now set the logmask so that debug and informational messages 
+     * get discarded without ever reaching Syslog. So the second syslog
+     * does nothing.
+     */    
+    setlogmask (LOG_UPTO (LOG_DEBUG));
+    syslog (LOG_NOTICE, "After setlogmask (upto LOG_DEBUG): "
+            "Program started by User %d", getuid ());
+    syslog (LOG_INFO, "This INFO log should be there");
+    printf("Sent LOG_NOTICE and LOG_INFO logs.\n\n");
+
+    closelog ();
+#endif
+
+    syslog (LOG_MAKEPRI(LOG_LOCAL1, LOG_ERR),
+            "Unable to make network connection to remote host");
+
+    /* Now openlog() to a custom facility */
+    //openlog ("ex_syslog", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_EX_SYSLOG);
+    openlog ("log_local0", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL0);
+
+    //setlogmask (LOG_UPTO (LOG_INFO));
+
+    printf("After openlog(\"exampleprog\", ..., LOG_EX_SYSLOG)...\n");
+     
+    syslog (LOG_NOTICE, "EX_SYSLOG: Program started by User %d", getuid ());
+    syslog (LOG_INFO, "EX_SYSLOG: A tree falls in a forest");
+    printf("Sent two logs (LOG_NOTICE and LOG_INFO)\n");     
+
+    //printf("Now try LOG_MAKEPRI(LOG_EX_SYSLOG,LOG_NOTICE)...\n");
+    //syslog (LOG_MAKEPRI(LOG_EX_SYSLOG, LOG_NOTICE), 
+    //    "MAKEPRI: LOG_EX_SYSLOG: Program started by User %d", getuid ());
+
+
+    printf("\nNow log to a different facility without re-openlog()...\n");
+
+    syslog (LOG_MAKEPRI(LOG_LOCAL0, LOG_INFO), 
+            "MAKEPRI: LOG_LOCAL0: A tree falls in a forest");
+
+
+
+#if 0
+
+    /* This one works fine */
+    syslog (LOG_MAKEPRI(LOG_USER, LOG_INFO), 
+            "MAKEPRI: LOG_USER: A tree falls in a forest");
+
+    /* But not the others */
+
+    syslog (LOG_MAKEPRI(LOG_LOCAL0, LOG_INFO), 
+            "MAKEPRI: LOG_LOCAL0: A tree falls in a forest");
+
+
+    syslog (LOG_MAKEPRI(LOG_LIBRTP, LOG_NOTICE), 
+            "MAKEPRI: LOG_LIBRTP: Program started by User %d", getuid ());
+
+    syslog (LOG_MAKEPRI(LOG_LIBRTP, LOG_INFO), 
+            "MAKEPRI: LOG_LIBRTP: A tree falls in a forest");
+
+
+
+    syslog (LOG_MAKEPRI(LOG_LOCAL7, LOG_INFO), 
+            "MAKEPRI: LOG_LOCAL7: A tree falls in a forest");
+
+#endif
+
+    closelog ();
+
+    return 0;
+}

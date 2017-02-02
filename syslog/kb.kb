@@ -1,0 +1,2 @@
+main     -   RET 1:EQ(0)
+vsyslog     -  TSFMTsink   $2    : [NULL,"vfprintf",0][NULL,"vsyslog",196]

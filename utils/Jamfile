@@ -1,0 +1,4 @@
+# To build: jam -a
+# To clean: jam clean
+Main igmp_join : igmp_join.c ;
+

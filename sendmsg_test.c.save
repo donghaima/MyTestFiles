@@ -1,0 +1,88 @@
+/*
+ * sendmsg test program
+ */
+
+
+#include <errno.h>
+#include <sys/socket.h>
+#include <sys/uio.h>
+#include <sys/types.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <strings.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#if NOT_DEFINED
+struct in_pktinfo
+{
+    int ipi_ifindex;                    /* Interface index  */
+    struct in_addr ipi_spec_dst;        /* Routing destination address  */
+    struct in_addr ipi_addr;            /* Header destination address  */
+};
+#endif
+
+int main(int argc, char **argv)
+{
+    int fd;
+    struct sockaddr_in sa;
+    static struct msghdr m;
+    struct ifreq ifr;
+    char buffer[10]={'6',};
+    struct iovec iov = {buffer, 0};
+    struct {
+        struct cmsghdr cm;
+        struct in_pktinfo ipi;
+    } cmsg = { {sizeof(struct cmsghdr) + sizeof(struct in_pktinfo), 
+                SOL_IP, IP_PKTINFO}, {0, }};
+    
+    if (argc < 5) {
+        fprintf(stderr, "Usage: %s <via if> <to ip> <ipi_spec ip>\n", 
+                argv[0]);
+        exit(1);
+    }
+    
+    fd = socket(PF_INET, SOCK_RAW, IPPROTO_UDP);
+    
+    if (fd < 0) {
+        perror ("socket:");
+        exit(1);
+    }
+
+    memset(&ifr, 0, sizeof(ifr));
+    strncpy(ifr.ifr_name, argv[1], 15);
+    if(ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
+        fprintf(stderr, "unknown iface %s\n", argv[1]);
+        exit(1);
+    }               
+    
+    cmsg.ipi.ipi_ifindex = ifr.ifr_ifindex;            /* outgoing intf */
+    cmsg.ipi.ipi_spec_dst.s_addr = inet_addr(argv[3]); /* src ip address */
+
+    //cmsg.ipi.ipi_ifindex = 0;
+    //cmsg.ipi.ipi_addr.s_addr = inet_addr(argv[4]);
+    
+    /* dest ip and port */
+    sa.sin_family = AF_INET;
+    sa.sin_port = htons(0);
+    sa.sin_addr.s_addr = inet_addr(argv[2]);
+    
+    iov.iov_len = 10;
+    
+    m.msg_name = &sa;
+    m.msg_namelen = sizeof(sa);
+    m.msg_iov = &iov;
+    m.msg_iovlen = 1;
+    m.msg_control = &cmsg;
+    m.msg_controllen = sizeof(cmsg);
+    m.msg_flags = 0;
+    
+    while (1){
+        sleep(1);
+        sendmsg(fd, &m, 0);
+    }
+}
+
+

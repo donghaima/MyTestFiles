@@ -1,0 +1,3 @@
+sed "s/vqes:3:respawn:.*$/#vqes:3:respawn:\/opt\/vqes\/bin\/process_monitor -c \/etc\/opt\/vqes\/vqes.conf/; \
+     s/rtsp:3:respawn:.*$/#rtsp:3:respawn:\/opt\/vqes\/bin\/VQECCfgDeliveryServer -f \/etc\/opt\/vqes\/VCDServer.cfg/" /etc/inittab > .inittab.$$
+mv -f .inittab.$$ /etc/inittab
