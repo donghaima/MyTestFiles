@@ -14,6 +14,9 @@ int main ()
     std::list<int> list1 = { 1, 2, 3, 4, 5 };
     std::list<int> list2 = { 10, 20, 30, 40, 50 };
  
+    std::cout << "Before splicing, list1: " << list1 << "\n";
+    std::cout << "Before splicing, list2: " << list2 << "\n";
+
     auto it = list1.begin();
     std::advance(it, 2);
  
